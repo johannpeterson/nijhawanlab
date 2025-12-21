@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 # sequence transformations
 cdna() {tr "AaCcGgTt" "TtGgCcAa" <&0 >&1}
 rdna() {rev <&0 >&1}
@@ -123,7 +125,7 @@ grep_sequence () {
         less -S
 }
 
-function highlight2() {
+function highlight2 () {
     # https://github.com/kepkin/dev-shell-essentials/blob/master/highlight.sh
     declare -A fg_color_map
     fg_color_map[black]=30
@@ -178,6 +180,10 @@ function compcounts() {
        <(csvtk grep -t -f sample -p $1 $3|csvtk cut -t -f frequency,barcode|csvtk pretty -t)
 }
 
+# List the column names (from the first row)
+colnames () {
+    csvtk head $1 | csvtk transpose| csvtk cut -f 1
+}
 
 ########################################
 #
@@ -257,3 +263,46 @@ function expand() {
     file_list=$~1
     echo $file_list
 }
+
+########################################
+#
+# Amplicon-related
+#
+########################################
+
+# Takes a single command-line argument specifying the prefix
+# for the FASTQ files.
+
+function flash_merge () {
+    PREFIX=$1
+    FWD_FILE=$1"_R1_001.fastq.gz"
+    REV_FILE=$1"_R2_001.fastq.gz"
+    LOG_FILE=$1"_flash.log"
+    FRAGS_FILE=$1".extendedFrags.fastq"
+    MERGED_FILE=$1"_merged.fastq"
+
+    flash2 -M 230 -o $1 $FWD_FILE $REV_FILE 2>&1 | tee $LOG_FILE
+    mv $FRAGS_FILE $MERGED_FILE
+}
+
+# Takes a single argument with the file name of a FASTQ
+# file, e.g. the file containing the merged R1 & R2 reads.
+
+guess_amplicon () {
+    HCT116_SEQ="GTTCTTCTGASWSWSWSWSWSWSWSWSWSWSWSWACGCGTCTG"
+    SUDHL5_SEQ="GGAGGGCTGASWSWSWSWSWSWSWSWSWSWTCTGGAACAA"
+    N=$(seqkit grep -d -C -s -p "$HCT116_SEQ" $1)
+    echo "HCT116: $N"
+    N=$(seqkit grep -d -C -s -p "$SUDHL5_SEQ" $1)
+    echo "SUDHL5: $N"
+}
+
+# Process a samples.tsv file for use in the Colab amplicons workflow.
+
+procsamples () {
+    cleantsv $1 | csvtk -t add-header --names "sample,fwd_primer,rev_primer"
+}
+
+########################################
+
+echo "biocommands.sh sourced"
