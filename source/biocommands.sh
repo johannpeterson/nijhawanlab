@@ -88,6 +88,24 @@ prettytsv() {
     fi
 }
 
+v() {
+    extension="${1:e}"
+    if [[ "$extension" == "csv" ]]; then
+        viewcmd="csvtk pretty"
+    else
+        viewcmd="csvtk pretty -t"
+    fi
+
+    if [[ "$#" -eq 0 ]]; then
+        fullcmd="$viewcmd"" | less --header 2"
+    else
+        fullcmd="$viewcmd"" $1"" | less --header 2"
+    fi
+
+    echo "$fullcmd"
+    eval "$fullcmd"
+}
+
 # highlight primers in different colors
 # assumes the presence of four files containing the forward, reverse, reverse compliment forward & reverse primer sequences,
 # as produced by `split_primers`
